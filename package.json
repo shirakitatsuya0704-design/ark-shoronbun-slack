@@ -5,6 +5,7 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
+    "start": "node -r ts-node/register src/index.ts",
     "start:ja": "APP_LANG=ja node -r ts-node/register src/index.ts",
     "start:en": "APP_LANG=en PORT=3001 node -r ts-node/register src/index.ts",
     "dev:ja": "APP_LANG=ja ts-node src/index.ts",
@@ -21,12 +22,12 @@
     "@slack/bolt": "^4.7.2",
     "axios": "^1.16.1",
     "dotenv": "^17.4.2",
-    "node-cron": "^4.2.1"
+    "node-cron": "^4.2.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^6.0.3"
   },
   "devDependencies": {
     "@types/node": "^25.9.0",
-    "@types/node-cron": "^3.0.11",
-    "ts-node": "^10.9.2",
-    "typescript": "^6.0.3"
+    "@types/node-cron": "^3.0.11"
   }
 }
