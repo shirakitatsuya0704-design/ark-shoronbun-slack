@@ -1,5 +1,6 @@
 import { App } from "@slack/bolt";
 import cron from "node-cron";
+import * as http from "http";
 import { config } from "./config";
 import { registerMentionHandler } from "./handlers/mention";
 import { postDailyContent } from "./scheduler";
@@ -30,10 +31,19 @@ cron.schedule(
   }
 );
 
+// Render用ヘルスチェックサーバー
+const port = config.slack.port;
+http.createServer((_, res) => {
+  res.writeHead(200);
+  res.end("OK");
+}).listen(port, () => {
+  console.log(`🌐 Health check server listening on port ${port}`);
+});
+
 // Bolt アプリ起動
 (async () => {
-  await app.start(config.slack.port);
-  console.log(`⚡ Slack Bot started (lang=${config.lang}, port=${config.slack.port})`);
+  await app.start();
+  console.log(`⚡ Slack Bot started (lang=${config.lang})`);
   console.log(`📅 Daily content scheduled: ${cronSchedule} (Asia/Tokyo)`);
 
   // 起動直後にすぐ配信テストしたい場合は以下をコメント解除

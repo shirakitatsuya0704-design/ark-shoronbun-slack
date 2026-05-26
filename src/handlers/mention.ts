@@ -6,105 +6,125 @@ interface SlackMessage {
   text?: string;
   ts?: string;
   thread_ts?: string;
-  username?: string;
   bot_id?: string;
+  user?: string;
 }
 
 /**
- * スレッドの履歴から「記事投稿」と「お題」を取得する
- * 最初のメッセージ（Bot 投稿）のテキストから本文とお題を抽出する
+ * スレッドの全メッセージを取得して以下を抽出する
+ * - 記事のタイトル・お題（ルートメッセージ）
+ * - 生徒の回答（スレッド内の人間が書いたメッセージをすべて結合）
  */
 async function fetchThreadContext(
   client: App["client"],
   channelId: string,
-  threadTs: string
-): Promise<{ articleTitle: string; articleBody: string; question: string }> {
+  threadTs: string,
+  mentionText: string,
+): Promise<{
+  articleTitle: string;
+  question: string;
+  studentAnswer: string;
+}> {
   const result = await client.conversations.replies({
     channel: channelId,
     ts: threadTs,
-    limit: 10,
+    limit: 20,
   });
 
   const messages = (result.messages ?? []) as SlackMessage[];
   const rootMessage = messages[0];
 
-  if (!rootMessage?.text) {
-    return { articleTitle: "", articleBody: "", question: "" };
-  }
+  // --- 記事のタイトルとお題をルートメッセージから抽出 ---
+  const rootText = rootMessage?.text ?? "";
+  const lines = rootText.split("\n").filter((l) => l.trim().length > 0);
 
-  const text = rootMessage.text;
+  // タイトルは最初の行（カテゴリ | タイトル 形式）
+  const titleLine = lines[0] ?? "";
+  const articleTitle = titleLine.includes("|")
+    ? titleLine.split("|").slice(1).join("|").trim()
+    : titleLine;
 
-  // Slack Block Kit では text フィールドにプレーンテキストのfallbackが入る
-  // ヘッダー（タイトル）は最初の行から取得
-  const lines = text.split("\n").filter((l: string) => l.trim().length > 0);
-  const title = lines[0] ?? "";
+  // お題は最後の段落（最後の空行以降）
+  const question = lines[lines.length - 1] ?? "";
 
-  // お題は引用（>）の行を探す
-  const questionLine = lines.find((l: string) => l.startsWith(">")) ?? "";
-  const question = questionLine.replace(/^>\s*/, "").trim();
-
-  // 本文はタイトルとお題以外の部分
-  const body = lines
-    .filter((l: string) => l !== title && !l.startsWith(">"))
-    .join("\n")
+  // --- 生徒の回答を収集 ---
+  // 方針: メンションテキストに実質的な内容があればそれを使う
+  //       なければ、スレッド内の人間のメッセージをすべて結合する
+  const strippedMention = mentionText
+    .replace(/<@[A-Z0-9]+>/g, "")
+    .replace(/お願い[！!]?/g, "")
+    .replace(/これに対するコメントも教えて/g, "")
+    .replace(/添削して[ください]*/g, "")
     .trim();
 
-  return { articleTitle: title, articleBody: body, question };
+  let studentAnswer = "";
+
+  if (strippedMention.length > 30) {
+    // メンションテキスト自体に回答が含まれている場合
+    studentAnswer = strippedMention;
+  } else {
+    // スレッド内の人間のメッセージを結合（Botのメッセージは除外）
+    const humanMessages = messages
+      .slice(1) // ルートメッセージ（記事）を除く
+      .filter((m) => !m.bot_id) // Botのメッセージを除く
+      .map((m) => (m.text ?? "").replace(/<@[A-Z0-9]+>/g, "").trim())
+      .filter((t) => t.length > 10); // 短すぎる「お願い！」等を除く
+
+    studentAnswer = humanMessages.join("\n\n");
+  }
+
+  return { articleTitle, question, studentAnswer };
 }
 
 export function registerMentionHandler(app: App): void {
   app.event("app_mention", async ({ event, client, say }) => {
     const threadTs = event.thread_ts ?? event.ts;
     const channelId = event.channel;
-    const userText = event.text ?? "";
+    const mentionText = event.text ?? "";
 
-    // Bot 自身のメンション部分を除去して生徒の回答だけ取得
-    const studentAnswer = userText
-      .replace(/<@[A-Z0-9]+>/g, "")
-      .trim();
-
-    if (!studentAnswer) {
-      await say({
-        thread_ts: threadTs,
-        text:
-          config.lang === "ja"
-            ? "回答が見当たりませんでした。スレッドに小論文を書いてメンションしてください！"
-            : "I couldn't find your essay. Please write your answer in the thread and mention me!",
-      });
-      return;
-    }
-
-    // スレッドのルートメッセージから記事情報を取得
-    const { articleTitle, articleBody, question } = await fetchThreadContext(
-      client,
-      channelId,
-      threadTs
-    );
-
-    // 処理中メッセージを先に送る（UX改善）
-    const loadingText =
-      config.lang === "ja"
-        ? "✍️ 添削中です。少々お待ちください..."
-        : "✍️ Reviewing your essay, please wait a moment...";
-
-    await say({ thread_ts: threadTs, text: loadingText });
+    // 処理中メッセージを先に返す
+    await say({
+      thread_ts: threadTs,
+      text: config.lang === "ja"
+        ? "✍️ FB案を作成中です。少々お待ちください..."
+        : "✍️ Generating feedback, please wait...",
+    });
 
     try {
+      const { articleTitle, question, studentAnswer } = await fetchThreadContext(
+        client,
+        channelId,
+        threadTs,
+        mentionText,
+      );
+
+      if (!studentAnswer) {
+        await say({
+          thread_ts: threadTs,
+          text: config.lang === "ja"
+            ? "生徒の回答が見当たりませんでした。スレッドに生徒の回答が書かれているか確認してください。"
+            : "No student answer found. Please check if the answer is in the thread.",
+        });
+        return;
+      }
+
       const feedback = await generateFeedback({
         articleTitle,
-        articleBody,
+        articleBody: "",
         question,
         studentAnswer,
       });
 
       await say({ thread_ts: threadTs, text: feedback });
+
     } catch (err) {
       console.error("Feedback generation error:", err);
-      const errText =
-        config.lang === "ja"
-          ? "申し訳ありません、添削の生成中にエラーが発生しました。もう一度お試しください。"
-          : "Sorry, an error occurred while generating feedback. Please try again.";
-      await say({ thread_ts: threadTs, text: errText });
+      await say({
+        thread_ts: threadTs,
+        text: config.lang === "ja"
+          ? "エラーが発生しました。もう一度お試しください。"
+          : "An error occurred. Please try again.",
+      });
     }
   });
 }

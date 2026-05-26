@@ -23,13 +23,22 @@ export function buildArticleBlocks(content: DailyContent, lang: Lang, isTeacherC
   const l = labels[lang];
 
   const blocks: KnownBlock[] = [
+    // ブランドヘッダー
+    {
+      type: "context",
+      elements: [
+        {
+          type: "image",
+          image_url: "https://ark-collegejp.com/wp-content/uploads/2024/03/ark-college-logo.png",
+          alt_text: "Ark College",
+        },
+        { type: "mrkdwn", text: `*Daily Ark News*　|　${content.category}` },
+      ],
+    },
+    // 記事タイトル
     {
       type: "header",
       text: { type: "plain_text", text: content.title, emoji: true },
-    },
-    {
-      type: "context",
-      elements: [{ type: "mrkdwn", text: `*${content.category}*` }],
     },
     { type: "divider" },
     {
