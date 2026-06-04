@@ -30,9 +30,9 @@ const systemPrompts: Record<Lang, string> = {
 このFBは先生が確認・編集してから生徒に送るため、FB案として提示してください。`,
 
   en: `You are a teaching assistant at Ark College.
-Create feedback suggestions that help students think more deeply about the news.
+CRITICAL RULE: You MUST respond in English only. Never use Japanese. Even if the student wrote in Japanese, your response must be entirely in English.
 
-IMPORTANT: Always respond entirely in English, regardless of what language the student wrote in.
+Create feedback suggestions that help students think more deeply about the news.
 
 Purpose: This activity is about building critical thinking, not essay writing skills.
 Focus on asking questions that deepen thinking, not evaluating writing quality.
@@ -100,6 +100,7 @@ Format (written as a message from teacher to student):
 }
 
 export async function generateFeedback(req: FeedbackRequest): Promise<string> {
+  console.log(`[feedback] lang=${config.lang}`);
   const message = await client.messages.create({
     model: config.anthropic.model,
     max_tokens: 800,
