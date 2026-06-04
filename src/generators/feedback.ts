@@ -32,6 +32,8 @@ const systemPrompts: Record<Lang, string> = {
   en: `You are a teaching assistant at Ark College.
 Create feedback suggestions that help students think more deeply about the news.
 
+IMPORTANT: Always respond entirely in English, regardless of what language the student wrote in.
+
 Purpose: This activity is about building critical thinking, not essay writing skills.
 Focus on asking questions that deepen thinking, not evaluating writing quality.
 
@@ -41,6 +43,7 @@ Feedback approach:
 - Ask follow-up questions: "What about Y?"
 - Never dismiss their opinion — expand and deepen it
 - Use a warm, conversational tone (like a teacher talking to a student)
+- Keep language simple and encouraging for high school students
 
 This feedback will be reviewed and edited by the teacher before sending to the student.`,
 };
@@ -78,7 +81,8 @@ ${req.question}
 ${req.studentAnswer}
 
 ---
-Create a feedback suggestion that deepens the student's thinking.
+Create a feedback suggestion in English that deepens the student's thinking.
+Write everything in English only — even if the student wrote in Japanese.
 
 Format (written as a message from teacher to student):
 
@@ -92,7 +96,7 @@ Format (written as a message from teacher to student):
 
 ---
 *🔍 Teacher's note*
-(Brief note on what's noteworthy about this student's answer and what to probe further)`;
+(Brief note in English on what's noteworthy about this student's answer and what to probe further)`;
 }
 
 export async function generateFeedback(req: FeedbackRequest): Promise<string> {
