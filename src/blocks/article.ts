@@ -6,15 +6,15 @@ const labels: Record<Lang, { sources: string; question: string; studentHint: str
   ja: {
     sources: "📰 今日のニュース（3本）",
     question: "💭 今日の問い",
-    studentHint: "💬 このスレッドに自分の考えを書いて送ってください！回答に @shoronbun-ja をメンションするとフィードバックが届きます。",
-    teacherHint: "👩‍🏫 生徒の回答をスレッドに貼り付けて @shoronbun-ja をメンションすると、思考深化のFB案を生成します",
+    studentHint: "💬 このスレッドに自分の考えを書いて送ってください！回答に @Daily Ark News(JP) をメンションするとフィードバックが届きます。",
+    teacherHint: "👩‍🏫 生徒の回答をスレッドに貼り付けて @Daily Ark News(JP) をメンションすると、思考深化のFB案を生成します",
     readMore: "記事を読む",
   },
   en: {
     sources: "📰 Today's News (3 Articles)",
     question: "💭 Today's Question",
-    studentHint: "💬 Write your thoughts in this thread! Mention @shoronbun-en in your reply to get instant feedback.",
-    teacherHint: "👩‍🏫 Paste the student's answer in thread and mention @shoronbun-en to generate feedback suggestions",
+    studentHint: "💬 Write your thoughts in this thread! Mention @Daily Ark News(EN) in your reply to get instant feedback.",
+    teacherHint: "👩‍🏫 Paste the student's answer in thread and mention @Daily Ark News(EN) to generate feedback suggestions",
     readMore: "Read article",
   },
 };
