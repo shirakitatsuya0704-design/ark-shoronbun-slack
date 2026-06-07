@@ -7,14 +7,14 @@ const labels: Record<Lang, { sources: string; question: string; studentHint: str
     sources: "📰 今日のニュース（3本）",
     question: "💭 今日の問い",
     studentHint: "💬 このスレッドに自分の考えを書いて送ってください！回答に @shoronbun-ja をメンションするとフィードバックが届きます。",
-    teacherHint: "👩‍🏫 *先生用*：生徒の回答をスレッドに貼り付けて @shoronbun-ja をメンションすると、思考深化のFB案を生成します",
+    teacherHint: "👩‍🏫 生徒の回答をスレッドに貼り付けて @shoronbun-ja をメンションすると、思考深化のFB案を生成します",
     readMore: "記事を読む",
   },
   en: {
     sources: "📰 Today's News (3 Articles)",
     question: "💭 Today's Question",
     studentHint: "💬 Write your thoughts in this thread! Mention @shoronbun-en in your reply to get instant feedback.",
-    teacherHint: "👩‍🏫 *For teachers*: Paste the student's answer in thread and mention @shoronbun-en to generate feedback suggestions",
+    teacherHint: "👩‍🏫 Paste the student's answer in thread and mention @shoronbun-en to generate feedback suggestions",
     readMore: "Read article",
   },
 };
