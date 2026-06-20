@@ -72,7 +72,7 @@ function buildUserPrompt(lang: Lang, query: string, category: string): string {
     { "title": "...", "url": "...", "summary": "..." },
     { "title": "...", "url": "...", "summary": "..." }
   ],
-  "question": "3つの記事を踏まえた思考を深める問い（1文。「あなたはどう思う？」「なぜそうなのか？」「〜についてはどう考える？」形式）"
+  "question": "以下の3段構造の問いをそのまま使ってください：\n① 要約：この記事の要点を自分の言葉でまとめてください。\n② 原因分析：この問題が起きている一番大きな原因は何だと思いますか？\n③ 解決策：その原因に対して、実行可能で効果がありそうな解決策を1つ考えてください。"
 }`;
   }
 
@@ -88,7 +88,7 @@ Return ONLY valid JSON (no code blocks):
     { "title": "...", "url": "...", "summary": "..." },
     { "title": "...", "url": "...", "summary": "..." }
   ],
-  "question": "One open-ended question that prompts deep thinking (e.g. 'What do you think about...?', 'Why do you believe...?')"
+  "question": "Use this fixed 3-part question structure:\n① Summary: Summarize the key points of this article in your own words.\n② Cause Analysis: What do you think is the biggest cause of this issue?\n③ Solution: Propose one feasible and effective solution to address that cause."
 }`;
 }
 
