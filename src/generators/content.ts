@@ -20,28 +20,29 @@ export interface DailyContent {
 // 曜日別テーマカテゴリ（0=日, 1=月, 2=火, 3=水, 4=木, 5=金, 6=土）
 const weeklyCategories: Record<Lang, Record<number, { category: string; query: string }>> = {
   ja: {
-    1: { category: "🏛 政治・国際", query: "日本の政治 国際関係 外交 最新ニュース 2025" },
-    2: { category: "💰 経済・金融", query: "日本経済 円安 物価 金融政策 最新ニュース 2025" },
-    3: { category: "🌍 社会・文化", query: "日本社会問題 少子化 多様性 文化 最新ニュース 2025" },
-    4: { category: "🤖 テクノロジー", query: "AI テクノロジー デジタル社会 日本 最新ニュース 2025" },
-    5: { category: "🌱 環境・科学", query: "気候変動 環境問題 科学技術 日本 最新ニュース 2025" },
-    0: { category: "📚 自由テーマ", query: "日本 社会課題 最新トレンド 2025" },
-    6: { category: "📚 自由テーマ", query: "日本 社会課題 最新トレンド 2025" },
+    1: { category: "🏛 政治・国際", query: "日本の政治 国際関係 外交 最新ニュース" },
+    2: { category: "💰 経済・金融", query: "日本経済 円安 物価 金融政策 最新ニュース" },
+    3: { category: "🌍 社会・文化", query: "日本社会問題 少子化 多様性 文化 最新ニュース" },
+    4: { category: "🤖 テクノロジー", query: "AI テクノロジー デジタル社会 日本 最新ニュース" },
+    5: { category: "🌱 環境・科学", query: "気候変動 環境問題 科学技術 日本 最新ニュース" },
+    0: { category: "📚 自由テーマ", query: "日本 社会課題 最新トレンド" },
+    6: { category: "📚 自由テーマ", query: "日本 社会課題 最新トレンド" },
   },
   en: {
-    1: { category: "🏛 Politics & International", query: "global politics international relations latest news 2025" },
-    2: { category: "💰 Economy & Finance", query: "global economy finance trade latest news 2025" },
-    3: { category: "🌍 Society & Culture", query: "society culture diversity social issues latest news 2025" },
-    4: { category: "🤖 Technology", query: "AI technology digital society latest news 2025" },
-    5: { category: "🌱 Environment & Science", query: "climate change environment science latest news 2025" },
-    0: { category: "📚 Free Theme", query: "global social issues trends 2025" },
-    6: { category: "📚 Free Theme", query: "global social issues trends 2025" },
+    1: { category: "🏛 Politics & International", query: "global politics international relations latest news" },
+    2: { category: "💰 Economy & Finance", query: "global economy finance trade latest news" },
+    3: { category: "🌍 Society & Culture", query: "society culture diversity social issues latest news" },
+    4: { category: "🤖 Technology", query: "AI technology digital society latest news" },
+    5: { category: "🌱 Environment & Science", query: "climate change environment science latest news" },
+    0: { category: "📚 Free Theme", query: "global social issues trends" },
+    6: { category: "📚 Free Theme", query: "global social issues trends" },
   },
 };
 
 function getTodayCategory(lang: Lang): { category: string; query: string } {
-  const dow = new Date().getDay();
-  return weeklyCategories[lang][dow];
+  const now = new Date();
+  const { category, query } = weeklyCategories[lang][now.getDay()];
+  return { category, query: `${query} ${now.getFullYear()}` };
 }
 
 const systemPrompts: Record<Lang, string> = {
@@ -72,7 +73,7 @@ function buildUserPrompt(lang: Lang, query: string, category: string): string {
     { "title": "...", "url": "...", "summary": "..." },
     { "title": "...", "url": "...", "summary": "..." }
   ],
-  "question": "以下の3段構造の問いをそのまま使ってください：\n① 要約：この記事の要点を自分の言葉でまとめてください。\n② 原因分析：この問題が起きている一番大きな原因は何だと思いますか？\n③ 解決策：その原因に対して、実行可能で効果がありそうな解決策を1つ考えてください。"
+  "question": "以下の3段構造の問いをそのまま使ってください：\n① 要約：これらの記事の要点を自分の言葉でまとめてください。\n② 原因分析：これらの記事が扱う問題の一番大きな原因は何だと思いますか？\n③ 解決策：その原因に対して、実行可能で効果がありそうな解決策を1つ考えてください。"
 }`;
   }
 
@@ -88,7 +89,7 @@ Return ONLY valid JSON (no code blocks):
     { "title": "...", "url": "...", "summary": "..." },
     { "title": "...", "url": "...", "summary": "..." }
   ],
-  "question": "Use this fixed 3-part question structure:\n① Summary: Summarize the key points of this article in your own words.\n② Cause Analysis: What do you think is the biggest cause of this issue?\n③ Solution: Propose one feasible and effective solution to address that cause."
+  "question": "Use this fixed 3-part question structure:\n① Summary: Summarize the key points of these articles in your own words.\n② Cause Analysis: What do you think is the biggest cause of the issue covered in these articles?\n③ Solution: Propose one feasible and effective solution to address that cause."
 }`;
 }
 
@@ -114,7 +115,7 @@ export async function generateDailyContent(): Promise<DailyContent> {
   const { category, query } = getTodayCategory(config.lang);
   console.log(`[content] Category: "${category}", Query: "${query}"`);
 
-  const tools = [{ type: "web_search_20250305", name: "web_search" } as unknown as Anthropic.Tool];
+  const tools = [{ type: "web_search_${new Date().getFullYear()}0305", name: "web_search" } as unknown as Anthropic.Tool];
   let messages: Anthropic.MessageParam[] = [
     { role: "user", content: buildUserPrompt(config.lang, query, category) },
   ];
