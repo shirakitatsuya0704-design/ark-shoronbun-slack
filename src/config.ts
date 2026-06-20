@@ -25,6 +25,10 @@ export const config = {
       .split(",")
       .map((s) => s.trim())
       .filter(Boolean),
+    studentUserIds: (process.env.STUDENT_USER_IDS ?? "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean),
     port: parseInt(process.env.PORT ?? "3000", 10),
   },
 
