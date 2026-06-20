@@ -67,7 +67,7 @@ export async function postDailyContent(app: App): Promise<void> {
         token: config.slack.botToken,
         channel: channelId,
         thread_ts: threadTs,
-        text: `<!here> ${fallbackText}`,
+        text: `<!channel> ${fallbackText}`,
         blocks: buildArticleBlocks(content, config.lang, false),
       });
       console.log(`[scheduler] Posted thread reply to ${channelId}`);
