@@ -59,7 +59,12 @@ export async function postDailyContent(app: App): Promise<void> {
   });
   console.log(`[scheduler] Posted to teacher channel: "${content.title}"`);
 
-  // 生徒チャンネル：固定スレッドに返信（@here付き）
+  // 生徒チャンネル：固定スレッドに返信（@channel付き）
+  const studentBlocks = [
+    { type: "section" as const, text: { type: "mrkdwn" as const, text: "<!channel>" } },
+    ...buildArticleBlocks(content, config.lang, false),
+  ];
+
   for (const channelId of config.slack.studentChannelIds) {
     try {
       const threadTs = await getOrCreateAnchorTs(app, channelId);
@@ -68,7 +73,7 @@ export async function postDailyContent(app: App): Promise<void> {
         channel: channelId,
         thread_ts: threadTs,
         text: `<!channel> ${fallbackText}`,
-        blocks: buildArticleBlocks(content, config.lang, false),
+        blocks: studentBlocks,
       });
       console.log(`[scheduler] Posted thread reply to ${channelId}`);
     } catch (err) {
