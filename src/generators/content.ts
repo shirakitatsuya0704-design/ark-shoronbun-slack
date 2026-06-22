@@ -115,7 +115,7 @@ export async function generateDailyContent(): Promise<DailyContent> {
   const { category, query } = getTodayCategory(config.lang);
   console.log(`[content] Category: "${category}", Query: "${query}"`);
 
-  const tools = [{ type: "web_search_${new Date().getFullYear()}0305", name: "web_search" } as unknown as Anthropic.Tool];
+  const tools = [{ type: "web_search_20250305", name: "web_search" } as unknown as Anthropic.Tool];
   let messages: Anthropic.MessageParam[] = [
     { role: "user", content: buildUserPrompt(config.lang, query, category) },
   ];
