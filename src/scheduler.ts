@@ -3,45 +3,42 @@ import { generateDailyContent } from "./generators/content";
 import { buildArticleBlocks } from "./blocks/article";
 import { config } from "./config";
 
-const ANCHOR_TEXT: Record<string, string> = {
-  ja: "【Daily Ark News スレッド】",
-  en: "【Daily Ark News Thread】",
-};
-
-const ANCHOR_BODY: Record<string, string> = {
-  ja: "📌 毎日のニュースはこのスレッド内に届きます。スレッドを開いて読んでください。",
-  en: "📌 Daily news arrives inside this thread. Open it each day to read.",
-};
-
-async function getOrCreateAnchorTs(app: App, channelId: string): Promise<string> {
-  const marker = ANCHOR_TEXT[config.lang];
-
-  const history = await app.client.conversations.history({
-    token: config.slack.botToken,
-    channel: channelId,
-    limit: 200,
-  });
-
-  const anchor = history.messages?.find((m) => m.text?.includes(marker));
-  if (anchor?.ts) {
-    console.log(`[scheduler] Found anchor in ${channelId}: ${anchor.ts}`);
-    return anchor.ts;
+function getDailyNotification(lang: string): string {
+  const now = new Date();
+  if (lang === "ja") {
+    const y = now.getFullYear();
+    const m = now.getMonth() + 1;
+    const d = now.getDate();
+    return `<!channel> 📍 ${y}年${m}月${d}日のDaily Ark Newsです ✉️`;
+  } else {
+    const opts: Intl.DateTimeFormatOptions = { year: "numeric", month: "long", day: "numeric" };
+    const date = now.toLocaleDateString("en-US", opts);
+    return `<!channel> 📍 Daily Ark News for ${date} ✉️`;
   }
+}
 
-  const result = await app.client.chat.postMessage({
+async function postToChannelWithThread(
+  app: App,
+  channelId: string,
+  notificationText: string,
+  fallbackText: string,
+  blocks: ReturnType<typeof buildArticleBlocks>
+): Promise<void> {
+  // チャンネルに1行通知を投稿
+  const notif = await app.client.chat.postMessage({
     token: config.slack.botToken,
     channel: channelId,
-    text: marker,
-    blocks: [
-      {
-        type: "section",
-        text: { type: "mrkdwn", text: `*${marker}*\n${ANCHOR_BODY[config.lang]}` },
-      },
-    ],
+    text: notificationText,
   });
 
-  console.log(`[scheduler] Created anchor in ${channelId}: ${result.ts}`);
-  return result.ts as string;
+  // その通知のスレッドにニュース本文を投稿
+  await app.client.chat.postMessage({
+    token: config.slack.botToken,
+    channel: channelId,
+    thread_ts: notif.ts as string,
+    text: fallbackText,
+    blocks,
+  });
 }
 
 export async function postDailyContent(app: App): Promise<void> {
@@ -49,6 +46,7 @@ export async function postDailyContent(app: App): Promise<void> {
 
   const content = await generateDailyContent();
   const fallbackText = `${content.category} | ${content.title}\n\n${content.intro}\n\n${content.question}`;
+  const notificationText = getDailyNotification(config.lang);
 
   // 先生チャンネルはトップレベル投稿（スレッドなし）
   await app.client.chat.postMessage({
@@ -59,29 +57,19 @@ export async function postDailyContent(app: App): Promise<void> {
   });
   console.log(`[scheduler] Posted to teacher channel: "${content.title}"`);
 
-  // 生徒チャンネル：固定スレッドに返信（@channel付き）
-  const studentBlocks = [
-    { type: "section" as const, text: { type: "mrkdwn" as const, text: "<!channel>" } },
-    ...buildArticleBlocks(content, config.lang, false),
-  ];
+  // 生徒チャンネル：通知1行 → スレッドにニュース本文
+  const studentBlocks = buildArticleBlocks(content, config.lang, false);
 
   for (const channelId of config.slack.studentChannelIds) {
     try {
-      const threadTs = await getOrCreateAnchorTs(app, channelId);
-      await app.client.chat.postMessage({
-        token: config.slack.botToken,
-        channel: channelId,
-        thread_ts: threadTs,
-        text: `<!channel> ${fallbackText}`,
-        blocks: studentBlocks,
-      });
-      console.log(`[scheduler] Posted thread reply to ${channelId}`);
+      await postToChannelWithThread(app, channelId, notificationText, fallbackText, studentBlocks);
+      console.log(`[scheduler] Posted to student channel: ${channelId}`);
     } catch (err) {
       console.error(`Failed to post to student channel ${channelId}:`, err);
     }
   }
 
-  // 生徒ユーザーにDM：固定スレッドに返信
+  // 生徒ユーザーにDM：通知1行 → スレッドにニュース本文
   for (const userId of config.slack.studentUserIds) {
     try {
       const dm = await app.client.conversations.open({
@@ -91,15 +79,8 @@ export async function postDailyContent(app: App): Promise<void> {
       const dmChannelId = dm.channel?.id;
       if (!dmChannelId) throw new Error("DM channel not found");
 
-      const threadTs = await getOrCreateAnchorTs(app, dmChannelId);
-      await app.client.chat.postMessage({
-        token: config.slack.botToken,
-        channel: dmChannelId,
-        thread_ts: threadTs,
-        text: fallbackText,
-        blocks: buildArticleBlocks(content, config.lang, false),
-      });
-      console.log(`[scheduler] DM thread reply sent to ${userId}`);
+      await postToChannelWithThread(app, dmChannelId, notificationText, fallbackText, studentBlocks);
+      console.log(`[scheduler] DM sent to user: ${userId}`);
     } catch (err) {
       console.error(`Failed to DM user ${userId}:`, err);
     }
