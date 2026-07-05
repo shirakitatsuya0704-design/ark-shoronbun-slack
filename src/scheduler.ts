@@ -4,15 +4,15 @@ import { buildArticleBlocks } from "./blocks/article";
 import { config } from "./config";
 
 function getDailyNotification(lang: string): string {
-  const now = new Date();
+  const tokyoDate = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Tokyo" }));
   if (lang === "ja") {
-    const y = now.getFullYear();
-    const m = now.getMonth() + 1;
-    const d = now.getDate();
+    const y = tokyoDate.getFullYear();
+    const m = tokyoDate.getMonth() + 1;
+    const d = tokyoDate.getDate();
     return `<!channel> 📍 ${y}年${m}月${d}日のDaily Ark Newsです ✉️`;
   } else {
     const opts: Intl.DateTimeFormatOptions = { year: "numeric", month: "long", day: "numeric" };
-    const date = now.toLocaleDateString("en-US", opts);
+    const date = tokyoDate.toLocaleDateString("en-US", opts);
     return `<!channel> 📍 Daily Ark News for ${date} ✉️`;
   }
 }
