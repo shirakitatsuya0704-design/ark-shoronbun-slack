@@ -32,19 +32,24 @@ async function fetchThreadContext(
   });
 
   const messages = (result.messages ?? []) as SlackMessage[];
-  const rootMessage = messages[0];
 
-  // --- 記事のタイトルとお題をルートメッセージから抽出 ---
-  const rootText = rootMessage?.text ?? "";
+  // --- 記事のタイトルとお題を抽出 ---
+  // 新構造: ルートが通知行、2番目のBotメッセージがニュース本文
+  // 旧構造: ルートがニュース本文
+  // どちらにも対応するため「カテゴリ | タイトル」を含むメッセージを探す
+  const newsMessage = messages.find((m) => m.bot_id && (m.text ?? "").includes("|"))
+    ?? messages[0];
+
+  const rootText = newsMessage?.text ?? "";
   const lines = rootText.split("\n").filter((l) => l.trim().length > 0);
 
-  // タイトルは最初の行（カテゴリ | タイトル 形式）
-  const titleLine = lines[0] ?? "";
+  // タイトルは「カテゴリ | タイトル」形式の行
+  const titleLine = lines.find((l) => l.includes("|")) ?? lines[0] ?? "";
   const articleTitle = titleLine.includes("|")
     ? titleLine.split("|").slice(1).join("|").trim()
     : titleLine;
 
-  // お題は最後の段落（最後の空行以降）
+  // お題は最後の行
   const question = lines[lines.length - 1] ?? "";
 
   // --- 生徒の回答を収集 ---
@@ -118,12 +123,13 @@ export function registerMentionHandler(app: App): void {
       await say({ thread_ts: threadTs, text: feedback });
 
     } catch (err) {
-      console.error("Feedback generation error:", err);
+      const errMsg = err instanceof Error ? err.message : String(err);
+      console.error("[mention] Feedback generation error:", errMsg, err);
       await say({
         thread_ts: threadTs,
         text: config.lang === "ja"
-          ? "エラーが発生しました。もう一度お試しください。"
-          : "An error occurred. Please try again.",
+          ? `エラーが発生しました。もう一度お試しください。\n\`${errMsg}\``
+          : `An error occurred. Please try again.\n\`${errMsg}\``,
       });
     }
   });
