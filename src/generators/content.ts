@@ -153,7 +153,42 @@ export async function generateDailyContent(): Promise<DailyContent> {
   const textBlock = response.content.find((b): b is Anthropic.TextBlock => b.type === "text");
   if (!textBlock) throw new Error("No text response from Claude");
 
-  const parsed = JSON.parse(extractJson(textBlock.text.trim())) as DailyContent;
-  console.log(`[content] Generated: "${parsed.title}" (${parsed.category})`);
-  return parsed;
+  // JSONパース失敗時はリトライ（最大3回）
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const parsed = JSON.parse(extractJson(textBlock.text.trim())) as DailyContent;
+      console.log(`[content] Generated: "${parsed.title}" (${parsed.category})`);
+      return parsed;
+    } catch (e) {
+      lastError = e;
+      console.warn(`[content] JSON parse failed (attempt ${attempt}/3), retrying...`);
+      // リトライ時はJSONのみ返すよう明示的に追記して再度APIコール
+      const retryMessages: Anthropic.MessageParam[] = [
+        ...messages,
+        { role: "assistant", content: response.content },
+        { role: "user", content: config.lang === "ja"
+          ? "JSONのみを返してください。説明文は不要です。{から始めてください。"
+          : "Return ONLY the JSON object. No explanation. Start with {." },
+      ];
+      const retryResponse = await client.messages.create({
+        model: config.anthropic.model,
+        max_tokens: 4096,
+        system: systemPrompts[config.lang],
+        tools,
+        messages: retryMessages,
+      });
+      const retryBlock = retryResponse.content.find((b): b is Anthropic.TextBlock => b.type === "text");
+      if (retryBlock) {
+        try {
+          const parsed = JSON.parse(extractJson(retryBlock.text.trim())) as DailyContent;
+          console.log(`[content] Generated (retry ${attempt}): "${parsed.title}"`);
+          return parsed;
+        } catch {
+          lastError = e;
+        }
+      }
+    }
+  }
+  throw new Error(`Failed to parse JSON after 3 attempts: ${lastError}`);
 }
