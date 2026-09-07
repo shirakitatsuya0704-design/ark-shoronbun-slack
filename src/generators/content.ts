@@ -42,17 +42,20 @@ const weeklyCategories: Record<Lang, Record<number, { category: string; query: s
 function getTodayCategory(lang: Lang): { category: string; query: string } {
   const now = new Date();
   const { category, query } = weeklyCategories[lang][now.getDay()];
-  return { category, query: `${query} ${now.getFullYear()}` };
+  const month = now.toLocaleString("en-US", { month: "long" });
+  return { category, query: `${query} ${now.getFullYear()} ${month}` };
 }
 
 const systemPrompts: Record<Lang, string> = {
   ja: `あなたは高校2年生向けの教育コンテンツを作成する専門家です。
 web_searchツールを使って最新のニュース記事を検索し、実際のURLを取得してください。
-日本語のニュースソース（NHK、朝日新聞、日経新聞、毎日新聞など）を優先してください。`,
+日本語のニュースソース（NHK、朝日新聞、日経新聞、毎日新聞など）を優先してください。
+重要：必ず過去2週間以内に公開された記事を選んでください。検索上位に常に表示される定番記事は避け、新鮮なニュースを優先してください。`,
 
   en: `You are an expert educational content creator for high school students.
 Use the web_search tool to find real, current news articles with actual URLs.
-Prefer reputable English sources (BBC, Reuters, The Guardian, AP News, etc.).`,
+Prefer reputable English sources (BBC, Reuters, The Guardian, AP News, etc.).
+IMPORTANT: Always find articles published within the last 2 weeks. Avoid articles that commonly appear as evergreen top results — prioritize fresh, recently published news.`,
 };
 
 function buildUserPrompt(lang: Lang, query: string, category: string): string {
@@ -158,6 +161,13 @@ export async function generateDailyContent(): Promise<DailyContent> {
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
       const parsed = JSON.parse(extractJson(textBlock.text.trim())) as DailyContent;
+      // URLの重複を除去（同じ記事が複数返ることへの対策）
+      const seen = new Set<string>();
+      parsed.sources = parsed.sources.filter((s) => {
+        if (seen.has(s.url)) return false;
+        seen.add(s.url);
+        return true;
+      });
       console.log(`[content] Generated: "${parsed.title}" (${parsed.category})`);
       return parsed;
     } catch (e) {
@@ -182,6 +192,12 @@ export async function generateDailyContent(): Promise<DailyContent> {
       if (retryBlock) {
         try {
           const parsed = JSON.parse(extractJson(retryBlock.text.trim())) as DailyContent;
+          const seen2 = new Set<string>();
+          parsed.sources = parsed.sources.filter((s) => {
+            if (seen2.has(s.url)) return false;
+            seen2.add(s.url);
+            return true;
+          });
           console.log(`[content] Generated (retry ${attempt}): "${parsed.title}"`);
           return parsed;
         } catch {

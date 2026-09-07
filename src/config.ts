@@ -21,14 +21,14 @@ export const config = {
     signingSecret: requireEnv("SLACK_SIGNING_SECRET"),
     appToken: requireEnv("SLACK_APP_TOKEN"),
     teacherChannelId: requireEnv("TEACHER_CHANNEL_ID"),
-    studentChannelIds: (process.env.STUDENT_CHANNEL_IDS ?? "")
+    studentChannelIds: [...new Set((process.env.STUDENT_CHANNEL_IDS ?? "")
       .split(",")
       .map((s) => s.trim())
-      .filter(Boolean),
-    studentUserIds: (process.env.STUDENT_USER_IDS ?? "")
+      .filter(Boolean))],
+    studentUserIds: [...new Set((process.env.STUDENT_USER_IDS ?? "")
       .split(",")
       .map((s) => s.trim())
-      .filter(Boolean),
+      .filter(Boolean))],
     port: parseInt(process.env.PORT ?? "3000", 10),
   },
 
